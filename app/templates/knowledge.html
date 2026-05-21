@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}知识库 - 考研数学复习助手{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h1 class="h4 mb-3">我的知识库</h1>
+
+        <div class="card mb-3">
+            <div class="card-header small text-muted">知识点掌握度</div>
+            <div class="card-body p-2">
+                {% if knowledge %}
+                {% for k in knowledge %}
+                <div class="d-flex align-items-center mb-2 px-2">
+                    <span class="flex-grow-1 small">{{ k.knowledge_point }}</span>
+                    <div class="progress flex-grow-1 me-2" style="height:6px;max-width:120px;">
+                        <div class="progress-bar" style="width:{{ k.mastery_score }}%;background-color:{{ k.color }};"></div>
+                    </div>
+                    <small style="color:{{ k.color }};">{{ k.mastery_score }}分 · {{ k.level }}</small>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">还没有记录，上传一道错题后这里就会出现知识点追踪。</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header small text-muted">最近上传</div>
+            <div class="list-group list-group-flush">
+                {% if uploads %}
+                {% for u in uploads %}
+                <a href="/result/{{ u.id }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge {% if u.type == '错题' %}bg-danger{% elif u.type == '讲义' %}bg-info{% else %}bg-secondary{% endif %} me-1">{{ u.type }}</span>
+                        <small>{{ u.knowledge_point or '待分类' }}</small>
+                    </div>
+                    <small class="text-muted">{{ u.created_at[:10] if u.created_at else '' }}</small>
+                </a>
+                {% endfor %}
+                {% else %}
+                <div class="list-group-item text-muted text-center py-3">还没有上传记录</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="/" class="btn btn-primary"><i class="bi bi-plus-circle"></i> 上传新题</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

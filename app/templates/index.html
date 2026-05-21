@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}上传 - 考研数学复习助手{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h1 class="h4 mb-3 text-center">拍照上传数学题目或笔记</h1>
+
+        <form action="/api/upload" method="POST" enctype="multipart/form-data" id="upload-form">
+            <div class="card mb-3">
+                <div class="card-body text-center py-4">
+                    <label for="file-input" class="upload-area d-block" id="upload-label">
+                        <i class="bi bi-camera" style="font-size:2.5rem;color:#6c757d;"></i>
+                        <p class="mt-2 mb-0 text-muted">点击选择图片 或 直接拍照</p>
+                        <small class="text-muted">支持 JPG / PNG</small>
+                    </label>
+                    <input type="file" id="file-input" name="file" accept="image/*" capture="environment"
+                           class="d-none" onchange="previewImage(this)">
+                    <img id="preview" class="img-fluid rounded mt-3 d-none" style="max-height:300px;" alt="预览">
+                </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label small">分类（可选）</label>
+                    <select name="upload_type" class="form-select form-select-sm">
+                        <option value="待AI识别">让AI自动判断</option>
+                        <option value="错题">错题</option>
+                        <option value="笔记">笔记</option>
+                        <option value="讲义">讲义</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small">学科（可选）</label>
+                    <select name="subject" class="form-select form-select-sm">
+                        <option value="待AI识别">让AI自动判断</option>
+                        <option value="高数">高数</option>
+                        <option value="线代">线代</option>
+                        <option value="概率论">概率论</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small">补充说明（可选）</label>
+                <textarea name="user_note" class="form-control form-control-sm" rows="2"
+                          placeholder="例如：这道题我卡在了第二步..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2" id="submit-btn" disabled>
+                <i class="bi bi-magic"></i> 开始AI分析
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('preview');
+    const submit = document.getElementById('submit-btn');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('d-none');
+            submit.disabled = false;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

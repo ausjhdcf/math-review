@@ -1,0 +1,12 @@
+.upload-area {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 12px;
+    padding: 2rem 1rem;
+}
+.upload-area:hover {
+    background-color: #f0f4ff;
+}
+.card-header {
+    font-weight: 500;
+}

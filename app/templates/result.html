@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}分析结果 - 考研数学复习助手{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+        <a href="/" class="btn btn-outline-secondary btn-sm mb-3">&larr; 继续上传</a>
+
+        <div class="card mb-3">
+            <div class="card-header small text-muted">原图</div>
+            <div class="card-body text-center p-2">
+                <img src="{{ image_url }}" class="img-fluid rounded" style="max-height:300px;" alt="原图">
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="small text-muted">AI 识别内容</span>
+                <span class="badge bg-secondary">{{ upload.subject or '?' }}</span>
+            </div>
+            <div class="card-body">
+                <p class="card-text" style="white-space:pre-wrap;">{{ ocr.raw_text }}</p>
+                {% if ocr.formulas %}
+                <div class="mt-2">
+                    {% for f in ocr.formulas %}
+                    <span class="badge bg-light text-dark me-1 mb-1">{{ f }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if analysis.analysis_type == '错题分析' %}
+        <div class="card mb-3 border-danger">
+            <div class="card-header bg-danger bg-opacity-10 text-danger fw-bold small">
+                错因分析：{{ analysis.error_category }}
+            </div>
+            <div class="card-body">
+                <p class="mb-2" style="white-space:pre-wrap;">{{ analysis.error_detail }}</p>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success bg-opacity-10 text-success fw-bold small">正确解法</div>
+            <div class="card-body">
+                <p class="card-text" style="white-space:pre-wrap;">{{ analysis.correct_solution }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if analysis.analysis_type in ('讲义总结', '笔记整理') %}
+        <div class="card mb-3 border-info">
+            <div class="card-header bg-info bg-opacity-10 text-info fw-bold small">{{ analysis.analysis_type }}</div>
+            <div class="card-body">
+                <p style="white-space:pre-wrap;">{{ analysis.error_detail }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if analysis.suggestions %}
+        <div class="card mb-3">
+            <div class="card-header small text-muted">改进建议</div>
+            <div class="card-body">
+                <p style="white-space:pre-wrap;">{{ analysis.suggestions }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if analysis.related_knowledge %}
+        <div class="card mb-3">
+            <div class="card-header small text-muted">关联知识点</div>
+            <div class="card-body">
+                {% for kp in analysis.related_knowledge %}
+                <span class="badge bg-primary me-1 mb-1">{{ kp }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if analysis.similar_problems %}
+        <div class="card mb-3">
+            <div class="card-header small text-muted">推荐练习</div>
+            <div class="card-body">
+                {% for sp in analysis.similar_problems %}
+                <div class="mb-2">
+                    <strong>{{ sp.description if sp.description is defined else sp }}</strong>
+                    {% if sp.hint is defined and sp.hint %}
+                    <br><small class="text-muted">提示：{{ sp.hint }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="text-center mb-4">
+            <small class="text-muted">分析完成 · 已自动记录到知识库</small>
+        </div>
+    </div>
+</div>
+{% endblock %}
