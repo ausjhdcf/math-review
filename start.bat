@@ -1,0 +1,12 @@
+@echo off
+chcp 65001 >nul
+title 考研数学复习助手
+
+set QWEN_API_KEY=sk-3dccb69babe54aa1bd8f71a6e6c2f54e
+set DEEPSEEK_API_KEY=sk-b5e35b4d694f410295fc8d45f1be3af1
+set SUPABASE_URL=https://dohcxwgdcnehmwvqyhcq.supabase.co
+set SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvaGN4d2dkY25laG13dnF5aGNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNjk0NDksImV4cCI6MjA5NDk0NTQ0OX0.l7eE-4B-j61F8HaQucAvdI8RxQnVYOiS1Ea3-74anHg
+
+cd /d D:\claude\study
+python start.py
+pause
