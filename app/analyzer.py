@@ -45,8 +45,19 @@ def build_memory_context(knowledge_points: list[str]) -> str:
 
     all_records = []
     for kp in knowledge_points:
-        records = get_analysis_by_knowledge_point(kp, limit=3)
-        all_records.extend(records)
+        # Skip empty or overly long knowledge points that could break queries
+        if not kp or not kp.strip() or len(kp) > 200:
+            continue
+        # Skip knowledge points containing characters that would break JSON queries
+        bad_chars = ['"', '\\', '\x00', '�']
+        if any(c in kp for c in bad_chars):
+            continue
+        try:
+            records = get_analysis_by_knowledge_point(kp, limit=3)
+            all_records.extend(records)
+        except Exception:
+            # Non-critical: query failure should not block analysis
+            continue
 
     if not all_records:
         return "（该知识点无历史错题记录）"
