@@ -1,11 +1,31 @@
 {% extends "base.html" %}
 {% block title %}上传 - 考研数学复习助手{% endblock %}
+{% block head %}
+<style>
+#loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+}
+.loading-card {
+    background: white; border-radius: 16px; padding: 40px 32px;
+    text-align: center; max-width: 300px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.spinner {
+    width: 48px; height: 48px; border: 4px solid #e5e7eb;
+    border-top-color: #3b82f6; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <h1 class="h4 mb-3 text-center">拍照上传数学题目或笔记</h1>
 
-        <form action="/api/upload" method="POST" enctype="multipart/form-data" id="upload-form">
+        <form id="upload-form" onsubmit="return handleUpload(event)">
             <div class="card mb-3">
                 <div class="card-body text-center py-4">
                     <label for="file-input" class="upload-area d-block" id="upload-label">
@@ -51,9 +71,27 @@
         </form>
     </div>
 </div>
+
+<div id="loading-overlay" class="d-none">
+    <div class="loading-card">
+        <div class="spinner"></div>
+        <p id="loading-text" class="mt-3 mb-1">正在上传图片...</p>
+        <small id="loading-sub" class="text-muted"></small>
+    </div>
+</div>
+
+<div id="error-toast" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 d-none" style="z-index:10000;">
+    <div class="alert alert-danger mb-0 shadow-lg">
+        <p id="error-msg" class="mb-1"></p>
+        <button class="btn btn-sm btn-outline-danger" onclick="hideError()">关闭</button>
+        <button class="btn btn-sm btn-danger" onclick="retryUpload()">重试</button>
+    </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
+let lastFormData = null;
+
 function previewImage(input) {
     const preview = document.getElementById('preview');
     const submit = document.getElementById('submit-btn');
@@ -65,6 +103,84 @@ function previewImage(input) {
             submit.disabled = false;
         };
         reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function showError(msg) {
+    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error-toast').classList.remove('d-none');
+}
+
+function hideError() {
+    document.getElementById('error-toast').classList.add('d-none');
+}
+
+function retryUpload() {
+    hideError();
+    if (lastFormData) {
+        doUpload(lastFormData);
+    }
+}
+
+async function handleUpload(e) {
+    e.preventDefault();
+    const form = document.getElementById('upload-form');
+    lastFormData = new FormData(form);
+    doUpload(lastFormData);
+    return false;
+}
+
+async function doUpload(formData) {
+    const overlay = document.getElementById('loading-overlay');
+    const text = document.getElementById('loading-text');
+    const sub = document.getElementById('loading-sub');
+
+    overlay.classList.remove('d-none');
+    text.textContent = '正在上传图片...';
+    sub.textContent = '';
+
+    const stages = [
+        { delay: 3000,  text: 'AI 正在识别题目内容...',    sub: '千问视觉模型分析中' },
+        { delay: 8000,  text: '正在深度分析错因...',        sub: '这步最耗时，请耐心等待' },
+        { delay: 15000, text: '正在整理分析结果...',        sub: '即将完成' },
+    ];
+    let stageIdx = 0;
+    const stageTimer = setInterval(() => {
+        if (stageIdx < stages.length) {
+            const s = stages[stageIdx];
+            setTimeout(() => { text.textContent = s.text; sub.textContent = s.sub; }, 100);
+            stageIdx++;
+        }
+    }, 100);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+        const resp = await fetch('/api/upload', {
+            method: 'POST', body: formData, signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        clearInterval(stageTimer);
+
+        if (resp.redirected || resp.ok) {
+            window.location.href = resp.url;
+        } else {
+            const errText = await resp.text();
+            throw new Error('服务器错误 (' + resp.status + '): ' + errText.slice(0, 100));
+        }
+    } catch (err) {
+        clearTimeout(timeout);
+        clearInterval(stageTimer);
+        overlay.classList.add('d-none');
+
+        if (err.name === 'AbortError') {
+            showError('分析超时。AI 处理时间较长（最多 60 秒），请检查网络后重试。');
+        } else if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+            showError('网络连接失败，请检查后端服务是否启动。');
+        } else {
+            showError(err.message || '上传失败，请重试。');
+        }
     }
 }
 </script>
