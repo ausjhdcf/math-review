@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}修正识别 - 考研数学复习助手{% endblock %}
+{% block head %}
+<style>
+.block { margin-bottom:12px; }
+.block-label { font-size:11px; color:#aaa; margin-bottom:3px; display:flex; align-items:center; gap:4px; }
+
+.text-block {
+  width:100%; border:1px solid #dee2e6; border-radius:8px;
+  padding:10px 12px; font-size:15px; line-height:1.7;
+  background:#fafafa; outline:none; resize:none; overflow:hidden;
+  font-family:inherit; min-height:40px;
+}
+.text-block:focus { border-color:#0d6efd; box-shadow:0 0 0 3px rgba(13,110,253,0.1); background:#fff; }
+
+.formula-block {
+  border:2px solid #fbbf24; border-radius:8px; padding:12px 14px;
+  background:#fffbeb; position:relative; transition:all 0.15s;
+  min-height:44px; cursor:pointer;
+}
+.formula-block:hover { border-color:#f59e0b; }
+.formula-block.editing {
+  border-color:#db2777; background:#fff;
+  box-shadow:0 0 0 3px rgba(219,39,119,0.12); cursor:default;
+}
+.formula-block .display { width:100%; line-height:2; font-size:17px; }
+.formula-block .display .placeholder { color:#aaa; font-size:14px; }
+.formula-block .edit-area {
+  display:none; width:100%; border:none; outline:none;
+  font-size:15px; line-height:1.6; background:transparent;
+  font-family:"SF Mono","Consolas",monospace; color:#333;
+}
+.formula-block.editing .display { display:none; }
+.formula-block.editing .edit-area { display:block; }
+.formula-block .badge {
+  position:absolute; top:-8px; right:8px;
+  background:#fbbf24; color:#92400e; font-size:10px;
+  padding:2px 8px; border-radius:10px; font-weight:600;
+}
+.formula-block.editing .badge { background:#db2777; color:#fff; }
+.formula-block .hint {
+  display:none; position:absolute; bottom:-18px; right:0;
+  font-size:10px; color:#db2777;
+}
+.formula-block.editing .hint { display:block; }
+.live-preview {
+  display:none; margin-top:10px; padding:14px 12px;
+  background:#fff; border-radius:6px; border:1px dashed #dee2e6;
+  font-size:17px; line-height:2.2; min-height:44px; text-align:center;
+  overflow-x:auto; overflow-y:visible;
+}
+.formula-block.editing .live-preview { display:block; }
+.live-preview .katex-display { margin:4px 0 !important; }
+
+.keyboard {
+  background:#f8f8f8; border:1px solid #e5e5ea; border-radius:12px;
+  padding:8px; margin-top:8px;
+}
+.key-row { display:flex; gap:4px; margin-bottom:4px; justify-content:center; flex-wrap:wrap; }
+.key {
+  min-width:40px; height:36px; border:none; border-radius:6px;
+  font-size:13px; cursor:pointer; display:flex;
+  align-items:center; justify-content:center;
+  transition:all 0.12s; user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.key:active { transform:scale(0.94); }
+.key.num { background:#fff; color:#1c1c1e; box-shadow:0 1px 2px rgba(0,0,0,0.08); }
+.key.fn { background:#f2f2f7; color:#1c1c1e; font-size:12px; }
+.key.op { background:#e8e8ed; color:#db2777; font-weight:600; font-size:15px; }
+.key.pink { background:#db2777; color:#fff; font-weight:600; font-size:13px; min-width:50px; }
+.key.wide { min-width:50px; font-size:11px; }
+.key.sm { font-size:10px; min-width:30px; }
+
+.active-hint { font-size:11px; color:#999; text-align:center; padding:4px 0; }
+.active-hint span { color:#db2777; font-weight:600; }
+
+@media (min-width: 768px) {
+  .edit-layout { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12" style="max-width:860px;">
+
+    <a href="/" class="btn btn-outline-secondary btn-sm mb-2">&larr; 返回</a>
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h1 class="h5 mb-0">修正识别内容</h1>
+      <span class="badge bg-secondary">步骤 2/3</span>
+    </div>
+
+    <div class="edit-layout">
+      <!-- Editor panel -->
+      <div>
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <span class="small text-muted">OCR 识别结果（可编辑）</span>
+            <span class="small text-muted">{{ upload.subject or '?' }}</span>
+          </div>
+          <div class="card-body py-2">
+            <img src="{{ image_url }}" class="img-fluid rounded mb-3" style="max-height:200px;" alt="原图">
+
+            <div id="blocks-container">
+              {% for block in blocks %}
+              <div class="block">
+                {% if block.type == 'text' %}
+                <div class="block-label">📝 文本</div>
+                <textarea class="text-block" rows="1" oninput="autoResize(this)">{{ block.content }}</textarea>
+                {% else %}
+                <div class="block-label">📐 公式 — 点一下编辑</div>
+                <div class="formula-block" onclick="editFormula(this)" data-latex="{{ block.content }}">
+                  <span class="badge">公式</span>
+                  <div class="display"><span class="placeholder">(点击编辑公式)</span></div>
+                  <textarea class="edit-area" rows="1" oninput="autoResize(this);livePreview(this)"></textarea>
+                  <div class="live-preview"></div>
+                  <div class="hint">点空白处退出编辑</div>
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+
+            <button class="btn btn-outline-secondary btn-sm mt-2" onclick="addTextBlock()">+ 加文本块</button>
+            <button class="btn btn-outline-warning btn-sm mt-2 ms-1" onclick="addFormulaBlock()">+ 加公式块</button>
+          </div>
+        </div>
+
+        <div class="active-hint">
+          先点一个<span>公式块</span>进入编辑，再用下方键盘插入符号
+        </div>
+
+        <!-- Math Keyboard -->
+        <div class="keyboard">
+          <div class="key-row">
+            <button class="key fn wide" onclick="insertToActive('\\frac{}{}')">分式</button>
+            <button class="key fn wide" onclick="insertToActive('\\sqrt{}')">√根号</button>
+            <button class="key fn wide" onclick="insertToActive('^{}')">x²</button>
+            <button class="key fn wide" onclick="insertToActive('_{}')">x₁</button>
+            <button class="key fn wide" onclick="insertToActive('\\left|{}\\right|')">| |</button>
+          </div>
+          <div class="key-row">
+            <button class="key fn wide" onclick="insertToActive('\\lim_{x \\to }{}\\;{}')">lim</button>
+            <button class="key fn wide" onclick="insertToActive('\\int_{}^{}{}')">∫</button>
+            <button class="key fn wide" onclick="insertToActive('\\sum_{}^{}{}')">Σ</button>
+            <button class="key fn wide" onclick="insertToActive('\\frac{d}{d}{}')">d/dx</button>
+            <button class="key fn wide" onclick="insertToActive('\\infty')">∞</button>
+          </div>
+          <div class="key-row">
+            <button class="key fn" onclick="insertToActive('\\sin')">sin</button>
+            <button class="key fn" onclick="insertToActive('\\cos')">cos</button>
+            <button class="key fn" onclick="insertToActive('\\tan')">tan</button>
+            <button class="key fn" onclick="insertToActive('\\ln')">ln</button>
+            <button class="key fn" onclick="insertToActive('\\log')">log</button>
+            <button class="key fn" onclick="insertToActive('e^{}')">eˣ</button>
+            <button class="key fn" onclick="insertToActive('\\frac{\\partial}{\\partial }')" style="font-size:10px;">∂/∂</button>
+          </div>
+          <div class="key-row" style="overflow-x:auto;justify-content:flex-start;">
+            <button class="key fn sm" onclick="insertToActive('\\pi')">π</button>
+            <button class="key fn sm" onclick="insertToActive('\\theta')">θ</button>
+            <button class="key fn sm" onclick="insertToActive('\\alpha')">α</button>
+            <button class="key fn sm" onclick="insertToActive('\\beta')">β</button>
+            <button class="key fn sm" onclick="insertToActive('\\lambda')">λ</button>
+            <button class="key fn sm" onclick="insertToActive('\\mu')">μ</button>
+            <button class="key fn sm" onclick="insertToActive('\\sigma')">σ</button>
+            <button class="key fn sm" onclick="insertToActive('\\varphi')">φ</button>
+            <button class="key fn sm" onclick="insertToActive('\\omega')">ω</button>
+            <button class="key fn sm" onclick="insertToActive('\\Delta')">Δ</button>
+          </div>
+          <div class="key-row">
+            <button class="key op" onclick="insertToActive('(')">(</button>
+            <button class="key op" onclick="insertToActive(')')">)</button>
+            <button class="key op" onclick="insertToActive('[')">[</button>
+            <button class="key op" onclick="insertToActive(']')">]</button>
+            <button class="key fn" onclick="insertToActive('\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}')" style="font-size:10px;">矩阵</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 mt-3" onclick="submitAnalysis()">
+          提交 DeepSeek 分析 →
+        </button>
+      </div>
+
+      <!-- Preview panel (desktop only) -->
+      <div class="d-none d-md-block">
+        <div class="card sticky-top" style="top:70px;">
+          <div class="card-header py-2 small text-muted">预览</div>
+          <div class="card-body" id="full-preview" style="font-size:16px;line-height:2.2;min-height:300px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let activeFormula = null;
+
+// Initialize formula blocks
+document.querySelectorAll('.formula-block').forEach(fb => renderFormulaBlock(fb));
+
+function renderFormulaBlock(fb) {
+  let latex = fb.getAttribute('data-latex') || '';
+  let displayDiv = fb.querySelector('.display');
+  let editArea = fb.querySelector('.edit-area');
+  if (!editArea.value) editArea.value = latex;
+
+  if (latex.trim()) {
+    let wrapped = latex.includes('\\lim') || latex.includes('\\int') || latex.includes('\\sum') || latex.includes('\\frac') || latex.length > 30
+      ? '$$' + latex + '$$' : '$' + latex + '$';
+    displayDiv.innerHTML = wrapped;
+    try {
+      renderMathInElement(displayDiv, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+    } catch(e) { displayDiv.textContent = latex; }
+  } else {
+    displayDiv.innerHTML = '<span class="placeholder">(点击编辑公式)</span>';
+  }
+}
+
+function editFormula(fb) {
+  if (activeFormula === fb && fb.classList.contains('editing')) return;
+  if (activeFormula && activeFormula !== fb) {
+    saveFormulaEdit(activeFormula);
+    activeFormula.classList.remove('editing');
+    renderFormulaBlock(activeFormula);
+  }
+  activeFormula = fb;
+  fb.classList.add('editing');
+  let editArea = fb.querySelector('.edit-area');
+  if (!editArea.value || editArea.value !== fb.getAttribute('data-latex')) {
+    editArea.value = fb.getAttribute('data-latex') || '';
+  }
+  editArea.style.display = 'block';
+  setTimeout(() => { editArea.focus(); autoResize(editArea); livePreview(editArea); }, 50);
+}
+
+function saveFormulaEdit(fb) {
+  let editArea = fb.querySelector('.edit-area');
+  fb.setAttribute('data-latex', editArea.value.trim());
+}
+
+function livePreview(editArea) {
+  let latex = editArea.value.trim();
+  let fb = editArea.closest('.formula-block');
+  let preview = fb.querySelector('.live-preview');
+  if (!latex) { preview.innerHTML = ''; return; }
+  let wrapped = latex.includes('\\lim') || latex.includes('\\int') || latex.includes('\\sum') || latex.includes('\\frac') || latex.length > 25
+    ? '$$' + latex + '$$' : '$' + latex + '$';
+  preview.innerHTML = wrapped;
+  try {
+    renderMathInElement(preview, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  } catch(e) { preview.textContent = latex; }
+  updateFullPreview();
+}
+
+function insertToActive(text) {
+  if (!activeFormula || !activeFormula.classList.contains('editing')) {
+    alert('请先点击一个公式块进入编辑模式');
+    return;
+  }
+  let editArea = activeFormula.querySelector('.edit-area');
+  let start = editArea.selectionStart;
+  let end = editArea.selectionEnd;
+  let val = editArea.value;
+  let scrollTop = editArea.scrollTop;
+  editArea.value = val.substring(0, start) + text + val.substring(end);
+  let pos = text.indexOf('{}');
+  if (pos >= 0) {
+    editArea.selectionStart = start + pos;
+    editArea.selectionEnd = start + pos + 2;
+  } else {
+    editArea.selectionStart = start + text.length;
+    editArea.selectionEnd = start + text.length;
+  }
+  activeFormula.setAttribute('data-latex', editArea.value);
+  editArea.focus({preventScroll: true});
+  editArea.scrollTop = scrollTop;
+  livePreview(editArea);
+  autoResize(editArea);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(40, el.scrollHeight) + 'px';
+}
+
+function updateFullPreview() {
+  let preview = document.getElementById('full-preview');
+  if (!preview) return;
+  let all = [];
+  document.querySelectorAll('#blocks-container .block').forEach(block => {
+    let fb = block.querySelector('.formula-block');
+    if (fb) {
+      let latex = fb.getAttribute('data-latex') || '';
+      if (latex) {
+        let wrapped = latex.includes('\\lim') || latex.includes('\\int') || latex.includes('\\sum') || latex.includes('\\frac') || latex.length > 30
+          ? '$$' + latex + '$$' : '$' + latex + '$';
+        all.push(wrapped);
+      }
+    } else {
+      let ta = block.querySelector('.text-block');
+      if (ta && ta.value.trim()) all.push('<p>' + ta.value.trim() + '</p>');
+    }
+  });
+  preview.innerHTML = all.join('\n');
+  try {
+    renderMathInElement(preview, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  } catch(e) {}
+}
+
+// Collect and submit
+function submitAnalysis() {
+  // Save any active formula edit
+  if (activeFormula) {
+    saveFormulaEdit(activeFormula);
+    activeFormula.classList.remove('editing');
+    renderFormulaBlock(activeFormula);
+    activeFormula = null;
+  }
+
+  let parts = [];
+  let allFormulas = [];
+  document.querySelectorAll('#blocks-container .block').forEach(block => {
+    let fb = block.querySelector('.formula-block');
+    if (fb) {
+      let latex = fb.getAttribute('data-latex') || '';
+      if (latex) {
+        let wrapped = latex.includes('\\lim') || latex.includes('\\int') || latex.includes('\\sum') || latex.includes('\\begin{') || latex.length > 30
+          ? '$$\n' + latex + '\n$$' : '$' + latex + '$';
+        parts.push(wrapped);
+        allFormulas.push(latex);
+      }
+    } else {
+      let ta = block.querySelector('.text-block');
+      if (ta && ta.value.trim()) parts.push(ta.value.trim());
+    }
+  });
+
+  let correctedText = parts.join('\n\n');
+
+  fetch('/api/analyze/{{ upload.id }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      corrected_text: correctedText,
+      formulas: allFormulas,
+      knowledge_points: [{% if upload.knowledge_point %}'{{ upload.knowledge_point }}'{% endif %}],
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.redirect) {
+      window.location.href = data.redirect;
+    } else {
+      alert('分析失败：' + (data.error || '未知错误'));
+    }
+  })
+  .catch(err => alert('请求失败：' + err.message));
+}
+
+// Click outside to close formula
+document.addEventListener('click', function(e) {
+  if (!activeFormula) return;
+  if (activeFormula.contains(e.target)) return;
+  // Check if click is on keyboard or related buttons
+  if (e.target.closest('.keyboard') || e.target.closest('.key') || e.target.closest('button')) return;
+  saveFormulaEdit(activeFormula);
+  activeFormula.classList.remove('editing');
+  renderFormulaBlock(activeFormula);
+  activeFormula = null;
+  updateFullPreview();
+});
+
+// Add blocks
+function addTextBlock() {
+  let div = document.createElement('div');
+  div.className = 'block';
+  div.innerHTML = '<div class="block-label">📝 文本</div><textarea class="text-block" rows="1" oninput="autoResize(this)" placeholder="输入文本..."></textarea>';
+  document.getElementById('blocks-container').appendChild(div);
+  updateFullPreview();
+}
+
+function addFormulaBlock() {
+  let div = document.createElement('div');
+  div.className = 'block';
+  div.innerHTML = '<div class="block-label">📐 公式 — 点一下编辑</div>'
+    + '<div class="formula-block" onclick="editFormula(this)" data-latex="">'
+    + '<span class="badge">公式</span>'
+    + '<div class="display"><span class="placeholder">(点击编辑公式)</span></div>'
+    + '<textarea class="edit-area" rows="1" oninput="autoResize(this);livePreview(this)"></textarea>'
+    + '<div class="live-preview"></div>'
+    + '<div class="hint">点空白处退出编辑</div>'
+    + '</div>';
+  document.getElementById('blocks-container').appendChild(div);
+  renderFormulaBlock(div.querySelector('.formula-block'));
+  updateFullPreview();
+}
+
+// Initialize
+document.querySelectorAll('.text-block').forEach(ta => autoResize(ta));
+updateFullPreview();
+</script>
+{% endblock %}

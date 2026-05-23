@@ -3,19 +3,36 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <h1 class="h4 mb-3">我的知识库</h1>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h4 mb-0">我的知识库</h1>
+            <button class="btn btn-primary btn-sm" onclick="showAddDialog()">
+                <i class="bi bi-plus-circle"></i> 手动添加
+            </button>
+        </div>
 
+        <!-- Search -->
+        <input class="form-control form-control-sm mb-3" type="text" id="search" placeholder="搜索知识点..." oninput="filterKnowledge()">
+
+        <!-- Knowledge list -->
         <div class="card mb-3">
-            <div class="card-header small text-muted">知识点掌握度</div>
-            <div class="card-body p-2">
+            <div class="card-header small text-muted">
+                知识点掌握度 <span class="text-muted">(分数由AI自动评估)</span>
+            </div>
+            <div class="card-body p-2" id="knowledge-list">
                 {% if knowledge %}
                 {% for k in knowledge %}
-                <div class="d-flex align-items-center mb-2 px-2">
-                    <span class="flex-grow-1 small">{{ k.knowledge_point }}</span>
-                    <div class="progress flex-grow-1 me-2" style="height:6px;max-width:120px;">
+                <div class="knowledge-item d-flex align-items-center mb-2 px-2 py-1" data-id="{{ k.id }}" data-name="{{ k.knowledge_point }}">
+                    <span class="flex-grow-1 small kp-name">{{ k.knowledge_point }}</span>
+                    <div class="progress flex-grow-1 me-2" style="height:6px;max-width:100px;">
                         <div class="progress-bar" style="width:{{ k.mastery_score }}%;background-color:{{ k.color }};"></div>
                     </div>
-                    <small style="color:{{ k.color }};">{{ k.mastery_score }}分 · {{ k.level }}</small>
+                    <small class="me-2" style="color:{{ k.color }};min-width:55px;text-align:right;">{{ k.mastery_score }}分 · {{ k.level }}</small>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1 me-1" title="重命名" onclick="showRenameDialog(this, {{ k.id }}, '{{ k.knowledge_point }}')">
+                        <i class="bi bi-pencil" style="font-size:11px;"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm py-0 px-1" title="删除" onclick="deleteKnowledge({{ k.id }}, '{{ k.knowledge_point }}')">
+                        <i class="bi bi-trash" style="font-size:11px;"></i>
+                    </button>
                 </div>
                 {% endfor %}
                 {% else %}
@@ -24,6 +41,7 @@
             </div>
         </div>
 
+        <!-- Recent uploads -->
         <div class="card mb-3">
             <div class="card-header small text-muted">最近上传</div>
             <div class="list-group list-group-flush">
@@ -48,4 +66,130 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <span class="fw-bold small">确认删除</span>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="mb-0 small">删除知识点 "<span id="delete-name"></span>"？<br>此操作不可撤销。</p>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-danger btn-sm" id="delete-confirm-btn">删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Rename Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <span class="fw-bold small" id="edit-modal-title">添加知识点</span>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <input class="form-control form-control-sm" id="edit-name-input" placeholder="知识点名称">
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary btn-sm" id="edit-confirm-btn">确认</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let deleteTargetId = null;
+let editTargetId = null;
+let editMode = 'add'; // 'add' or 'rename'
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+function filterKnowledge() {
+    let q = document.getElementById('search').value.toLowerCase();
+    document.querySelectorAll('.knowledge-item').forEach(item => {
+        let name = item.getAttribute('data-name').toLowerCase();
+        item.style.display = name.includes(q) ? '' : 'none';
+    });
+}
+
+function showAddDialog() {
+    editMode = 'add';
+    editTargetId = null;
+    document.getElementById('edit-modal-title').textContent = '添加知识点';
+    document.getElementById('edit-name-input').value = '';
+    document.getElementById('edit-confirm-btn').textContent = '添加';
+    editModal.show();
+}
+
+function showRenameDialog(btn, id, currentName) {
+    editMode = 'rename';
+    editTargetId = id;
+    document.getElementById('edit-modal-title').textContent = '重命名知识点';
+    document.getElementById('edit-name-input').value = currentName;
+    document.getElementById('edit-confirm-btn').textContent = '保存';
+    editModal.show();
+}
+
+function deleteKnowledge(id, name) {
+    deleteTargetId = id;
+    document.getElementById('delete-name').textContent = name;
+    deleteModal.show();
+}
+
+document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    let resp = await fetch('/api/knowledge/' + deleteTargetId, {method:'DELETE'});
+    let data = await resp.json();
+    if (data.success) {
+        let item = document.querySelector('.knowledge-item[data-id="' + deleteTargetId + '"]');
+        if (item) item.remove();
+    }
+    deleteModal.hide();
+});
+
+document.getElementById('edit-confirm-btn').addEventListener('click', async () => {
+    let name = document.getElementById('edit-name-input').value.trim();
+    if (!name) { alert('名称不能为空'); return; }
+
+    if (editMode === 'add') {
+        let resp = await fetch('/api/knowledge', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({name:name})
+        });
+        let data = await resp.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || '添加失败');
+        }
+    } else {
+        let resp = await fetch('/api/knowledge/' + editTargetId, {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({name:name})
+        });
+        let data = await resp.json();
+        if (data.success) {
+            let item = document.querySelector('.knowledge-item[data-id="' + editTargetId + '"]');
+            if (item) {
+                item.querySelector('.kp-name').textContent = name;
+                item.setAttribute('data-name', name);
+            }
+        } else {
+            alert(data.error || '修改失败');
+        }
+    }
+    editModal.hide();
+});
+</script>
 {% endblock %}

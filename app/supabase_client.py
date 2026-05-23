@@ -59,6 +59,15 @@ def save_ocr_result(upload_id: str, raw_text: str, formulas: list | None = None)
     return result.data[0]
 
 
+def update_ocr_result(ocr_id: str, raw_text: str, formulas: list | None = None) -> dict:
+    client = get_client()
+    result = client.table("ocr_results").update({
+        "raw_text": raw_text,
+        "formulas": formulas or [],
+    }).eq("id", ocr_id).execute()
+    return result.data[0] if result.data else {}
+
+
 def save_analysis(upload_id: str, analysis: dict) -> dict:
     client = get_client()
     data = {
@@ -149,6 +158,31 @@ def upsert_knowledge_point(knowledge_point: str, mastery_score: int = 50) -> dic
             .execute()
         )
         return result.data[0]
+
+
+def delete_knowledge_point(kp_id: int) -> bool:
+    client = get_client()
+    result = client.table("knowledge_graph").delete().eq("id", kp_id).eq("user_id", MVP_USER_ID).execute()
+    return len(result.data) > 0
+
+
+def add_knowledge_point(name: str) -> dict:
+    client = get_client()
+    result = client.table("knowledge_graph").insert({
+        "user_id": MVP_USER_ID,
+        "knowledge_point": name,
+        "mastery_score": 0,
+        "error_count": 0,
+    }).execute()
+    return result.data[0]
+
+
+def rename_knowledge_point(kp_id: int, new_name: str) -> dict:
+    client = get_client()
+    result = client.table("knowledge_graph").update({
+        "knowledge_point": new_name,
+    }).eq("id", kp_id).eq("user_id", MVP_USER_ID).execute()
+    return result.data[0] if result.data else {}
 
 
 def get_analysis_by_knowledge_point(knowledge_point: str, limit: int = 5) -> list[dict]:

@@ -1,0 +1,21 @@
+{
+  "name": "考研数学复习助手",
+  "short_name": "数学复习",
+  "description": "拍照上传数学题，AI 分析错因，追踪知识掌握度",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

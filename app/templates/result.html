@@ -23,7 +23,7 @@
                 {% if ocr.formulas %}
                 <div class="mt-2">
                     {% for f in ocr.formulas %}
-                    <span class="badge bg-light text-dark me-1 mb-1">{{ f }}</span>
+                    <span class="badge bg-light text-dark me-1 mb-1 math-inline">{{ f }}</span>
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -36,14 +36,14 @@
                 错因分析：{{ analysis.error_category }}
             </div>
             <div class="card-body">
-                <p class="mb-2" style="white-space:pre-wrap;">{{ analysis.error_detail }}</p>
+                <div class="math-content" style="white-space:pre-wrap;">{{ analysis.error_detail }}</div>
             </div>
         </div>
 
         <div class="card mb-3 border-success">
             <div class="card-header bg-success bg-opacity-10 text-success fw-bold small">正确解法</div>
             <div class="card-body">
-                <p class="card-text" style="white-space:pre-wrap;">{{ analysis.correct_solution }}</p>
+                <div class="math-content" style="white-space:pre-wrap;">{{ analysis.correct_solution }}</div>
             </div>
         </div>
         {% endif %}
@@ -52,7 +52,7 @@
         <div class="card mb-3 border-info">
             <div class="card-header bg-info bg-opacity-10 text-info fw-bold small">{{ analysis.analysis_type }}</div>
             <div class="card-body">
-                <p style="white-space:pre-wrap;">{{ analysis.error_detail }}</p>
+                <div class="math-content" style="white-space:pre-wrap;">{{ analysis.error_detail }}</div>
             </div>
         </div>
         {% endif %}
@@ -61,7 +61,7 @@
         <div class="card mb-3">
             <div class="card-header small text-muted">改进建议</div>
             <div class="card-body">
-                <p style="white-space:pre-wrap;">{{ analysis.suggestions }}</p>
+                <div class="math-content" style="white-space:pre-wrap;">{{ analysis.suggestions }}</div>
             </div>
         </div>
         {% endif %}
@@ -82,7 +82,7 @@
             <div class="card-header small text-muted">推荐练习</div>
             <div class="card-body">
                 {% for sp in analysis.similar_problems %}
-                <div class="mb-2">
+                <div class="mb-2 math-content">
                     <strong>{{ sp.description if sp.description is defined else sp }}</strong>
                     {% if sp.hint is defined and sp.hint %}
                     <br><small class="text-muted">提示：{{ sp.hint }}</small>
