@@ -162,8 +162,11 @@ def upsert_knowledge_point(knowledge_point: str, mastery_score: int = 50) -> dic
 
 def delete_knowledge_point(kp_id: int) -> bool:
     client = get_client()
-    result = client.table("knowledge_graph").delete().eq("id", kp_id).eq("user_id", MVP_USER_ID).execute()
-    return len(result.data) > 0
+    try:
+        client.table("knowledge_graph").delete().eq("id", kp_id).eq("user_id", MVP_USER_ID).execute()
+        return True
+    except Exception:
+        return False
 
 
 def add_knowledge_point(name: str) -> dict:
@@ -174,15 +177,18 @@ def add_knowledge_point(name: str) -> dict:
         "mastery_score": 0,
         "error_count": 0,
     }).execute()
-    return result.data[0]
+    return result.data[0] if result.data else {}
 
 
 def rename_knowledge_point(kp_id: int, new_name: str) -> dict:
     client = get_client()
-    result = client.table("knowledge_graph").update({
-        "knowledge_point": new_name,
-    }).eq("id", kp_id).eq("user_id", MVP_USER_ID).execute()
-    return result.data[0] if result.data else {}
+    try:
+        result = client.table("knowledge_graph").update({
+            "knowledge_point": new_name,
+        }).eq("id", kp_id).eq("user_id", MVP_USER_ID).execute()
+        return result.data[0] if result.data else {"success": True}
+    except Exception:
+        return {}
 
 
 def get_analysis_by_knowledge_point(knowledge_point: str, limit: int = 5) -> list[dict]:
